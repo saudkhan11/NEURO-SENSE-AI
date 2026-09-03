@@ -1,0 +1,10 @@
+.venv/
+venv/
+alz_env/
+__pycache__/
+Alzheimer_Balanced/
+outputs/
+*.pth
+*.h5
+*.env
+.env
