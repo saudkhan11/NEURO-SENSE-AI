@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroSense — Clinical Dementia Assessment Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#FBF8F3; --bg-raised:#FFFFFF; --ink:#16283A; --ink-soft:#5A6B78;
+    --sage:#5C7F66; --sage-deep:#3F5D48; --sage-tint:#DCE6DD;
+    --clay:#C4674A; --clay-tint:#F3E1DA; --sky:#A9C2CE;
+    --line:#E4DFD3; --line-soft:#EDE9E0;
+    --shadow:0 2px 24px rgba(22,40,58,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Public Sans',-apple-system,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Fraunces',serif; font-weight:600; letter-spacing:-0.01em; color:var(--ink); margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:0.01em;}
+  button, input, select, textarea{font-family:'Public Sans',sans-serif;}
+
+  /* ============ AUTH SCREEN ============ */
+  #authScreen{min-height:100vh; display:grid; grid-template-columns:1fr 1fr;}
+  @media(max-width:860px){ #authScreen{grid-template-columns:1fr;} #authBrand{display:none;} }
+  #authBrand{
+    background:linear-gradient(160deg, var(--sage-deep) 0%, #24382C 100%);
+    color:#fff; padding:60px; display:flex; flex-direction:column; justify-content:space-between;
+  }
+  #authBrand .brand{display:flex; align-items:center; gap:10px; font-size:20px; font-weight:600; font-family:'Fraunces',serif;}
+  #authBrand .brand-mark{width:32px; height:32px; border-radius:9px; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center;}
+  #authBrand .brand-mark svg{width:17px; height:17px;}
+  #authBrand h2{font-size:38px; color:#fff; line-height:1.15; max-width:420px;}
+  #authBrand p{color:rgba(255,255,255,0.75); font-size:15px; max-width:380px; margin-top:14px;}
+  #authBrand .quote{font-size:13px; color:rgba(255,255,255,0.55); font-family:'IBM Plex Mono',monospace;}
+  .auth-form-wrap{display:flex; align-items:center; justify-content:center; padding:40px;}
+  .auth-card{width:100%; max-width:380px;}
+  .auth-tabs{display:flex; gap:4px; background:var(--sage-tint); border-radius:100px; padding:4px; margin-bottom:30px;}
+  .auth-tab{flex:1; text-align:center; padding:10px; border-radius:100px; font-size:14px; font-weight:600; cursor:pointer; color:var(--sage-deep); border:none; background:none;}
+  .auth-tab.active{background:var(--bg-raised); box-shadow:var(--shadow);}
+  .field{margin-bottom:16px;}
+  .field-error{color:#C4674A; font-size:12.5px; margin-top:6px; display:none;}
+  .field-error.show{display:block;}
+  .field input.invalid{border-color:#C4674A;}
+  .field label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;}
+  .field input, .field select, .field textarea{
+    width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:10px;
+    background:var(--bg-raised); font-size:14.5px; color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--sage);}
+  .btn-primary{background:var(--sage-deep); color:#fff; border:none; padding:13px 24px; border-radius:100px; font-size:15px; font-weight:600; cursor:pointer; transition:background .15s;}
+  .btn-primary:hover{background:var(--ink);}
+  .btn-primary.full{width:100%;}
+  .btn-secondary{background:transparent; color:var(--ink); border:1px solid var(--line); padding:12px 22px; border-radius:100px; font-size:14px; font-weight:600; cursor:pointer;}
+  .btn-secondary:hover{border-color:var(--ink);}
+  .btn-ghost{background:none; border:none; color:var(--sage-deep); font-weight:600; font-size:13px; cursor:pointer; padding:0;}
+  .auth-foot{text-align:center; margin-top:18px; font-size:13px; color:var(--ink-soft);}
+  .demo-note{font-size:12px; color:var(--ink-soft); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-top:20px;}
+
+  /* ============ APP SHELL ============ */
+  #appScreen{display:none; min-height:100vh; grid-template-columns:250px 1fr;}
+  #appScreen.active{display:grid;}
+  .sidebar{background:var(--bg-raised); border-right:1px solid var(--line); padding:24px 16px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;}
+  .sidebar .brand{display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:600; font-size:18px; padding:6px 10px 26px;}
+  .brand-mark{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--sage),var(--sage-deep)); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .brand-mark svg{width:15px; height:15px;}
+  .nav-item{
+    display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px;
+    font-size:14.5px; font-weight:500; color:var(--ink-soft); cursor:pointer; margin-bottom:2px; border:none; background:none; width:100%; text-align:left;
+  }
+  .nav-item svg{width:18px; height:18px; flex-shrink:0;}
+  .nav-item:hover{background:var(--bg);}
+  .nav-item.active{background:var(--sage-tint); color:var(--sage-deep); font-weight:600;}
+  .sidebar-foot{margin-top:auto; border-top:1px solid var(--line); padding-top:16px;}
+  .user-chip{display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px;}
+  .avatar{width:34px; height:34px; border-radius:50%; background:var(--sage); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;}
+  .user-chip .u-name{font-size:13.5px; font-weight:600;}
+  .user-chip .u-role{font-size:11.5px; color:var(--ink-soft);}
+  .logout-link{font-size:12.5px; color:var(--ink-soft); cursor:pointer; margin-top:10px; display:block; padding-left:10px;}
+  .logout-link:hover{color:var(--clay);}
+
+  .main{padding:32px 40px 60px; max-width:1160px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .view-head{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; flex-wrap:wrap; gap:12px;}
+  .view-head h2{font-size:28px;}
+  .view-head .sub{font-size:14px; color:var(--ink-soft); margin-top:4px;}
+
+  /* stat cards */
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:30px;}
+  @media(max-width:900px){ .stat-grid{grid-template-columns:repeat(2,1fr);} }
+  .stat-card{background:var(--bg-raised); border:1px solid var(--line); border-radius:14px; padding:20px;}
+  .stat-card .lab{font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:8px;}
+  .stat-card .val{font-family:'Fraunces',serif; font-size:28px;}
+  .stat-card .delta{font-size:12px; color:var(--sage-deep); margin-top:4px;}
+
+  .panel{background:var(--bg-raised); border:1px solid var(--line); border-radius:16px; padding:24px; margin-bottom:20px;}
+  .panel h3{font-size:17px; margin-bottom:16px;}
+  .empty-state{text-align:center; padding:50px 20px; color:var(--ink-soft);}
+  .empty-state svg{width:38px; height:38px; color:var(--line); margin-bottom:14px;}
+  .empty-state p{font-size:14px; margin-bottom:16px;}
+
+  .activity-row{display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line-soft);}
+  .activity-row:last-child{border-bottom:none;}
+  .activity-left{display:flex; align-items:center; gap:12px;}
+  .activity-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .activity-name{font-size:14px; font-weight:600;}
+  .activity-meta{font-size:12.5px; color:var(--ink-soft);}
+  .stage-tag{font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:5px 10px; border-radius:100px; text-transform:uppercase;}
+
+  /* form grid for analysis */
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:640px){ .form-grid{grid-template-columns:1fr;} }
+  .dropzone{border:1.5px dashed var(--line); border-radius:14px; padding:30px 20px; text-align:center; background:var(--bg); cursor:pointer; position:relative;}
+  .dropzone:hover, .dropzone.drag{border-color:var(--sage); background:var(--sage-tint);}
+  .dropzone svg{width:30px; height:30px; color:var(--sage-deep); margin-bottom:8px;}
+  .dropzone input[type=file]{position:absolute; inset:0; opacity:0; cursor:pointer;}
+  .preview-row{display:flex; align-items:center; gap:12px; margin-top:14px;}
+  .preview-thumb{width:48px; height:48px; border-radius:10px; object-fit:cover; border:1px solid var(--line);}
+  .preview-meta{font-size:13px; color:var(--ink-soft);}
+  .preview-meta b{color:var(--ink); display:block; font-size:14px;}
+
+  /* results dashboard (reused across analysis view) */
+  .dash-shell{background:var(--bg-raised); border:1px solid var(--line); border-radius:18px; overflow:hidden; margin-top:24px;}
+  .dash-top{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:24px 26px; border-bottom:1px solid var(--line-soft); background:linear-gradient(180deg,#fff,#FCFAF6);}
+  .stage-id{display:flex; align-items:center; gap:14px;}
+  .stage-badge{font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; background:var(--clay-tint); color:var(--clay); padding:6px 12px; border-radius:100px; text-transform:uppercase;}
+  .stage-id h3{font-size:20px;}
+  .stage-sub{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .conf-readout{text-align:right;}
+  .conf-readout .big{font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; color:var(--sage-deep);}
+  .conf-readout .lab{font-size:11.5px; color:var(--ink-soft); text-transform:uppercase;}
+  .horizon-block{padding:22px 26px; border-bottom:1px solid var(--line-soft);}
+  .horizon-label{font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:12px;}
+  .horizon{position:relative; height:48px; border-radius:12px; background:linear-gradient(90deg,#7FA989 0%,#C9C77A 38%,#D89A5C 68%,#C4674A 100%);}
+  .horizon-ticks{display:grid; grid-template-columns:repeat(4,1fr); position:absolute; inset:0;}
+  .horizon-ticks div{border-right:1px solid rgba(255,255,255,0.4);}
+  .horizon-ticks div:last-child{border-right:none;}
+  .horizon-marker{position:absolute; top:-9px; width:2px; height:66px; background:var(--ink); transition:left .6s cubic-bezier(.4,0,.2,1);}
+  .horizon-marker::after{content:''; position:absolute; top:-9px; left:50%; transform:translateX(-50%); width:16px; height:16px; border-radius:50%; background:var(--ink); border:3px solid var(--bg-raised); box-shadow:0 2px 8px rgba(0,0,0,0.25);}
+  .horizon-labels{display:grid; grid-template-columns:repeat(4,1fr); margin-top:9px;}
+  .horizon-labels span{font-size:11.5px; color:var(--ink-soft); text-align:center;}
+  .horizon-labels span.active{color:var(--ink); font-weight:600;}
+  .conf-bars{padding:20px 26px; border-bottom:1px solid var(--line-soft);}
+  .conf-row{display:grid; grid-template-columns:130px 1fr 50px; align-items:center; gap:12px; margin-bottom:11px;}
+  .conf-row:last-child{margin-bottom:0;}
+  .conf-row .name{font-size:12.5px; color:var(--ink-soft);}
+  .conf-row .name.active{color:var(--ink); font-weight:600;}
+  .conf-track{height:7px; background:var(--line-soft); border-radius:100px; overflow:hidden;}
+  .conf-fill{height:100%; border-radius:100px; background:var(--sage); transition:width .8s ease;}
+  .conf-fill.active{background:var(--clay);}
+  .conf-val{font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-align:right; color:var(--ink-soft);}
+  .tabs{display:flex; gap:4px; padding:16px 26px 0; overflow-x:auto;}
+  .tab{font-size:13.5px; font-weight:600; color:var(--ink-soft); background:none; border:none; padding:11px 14px; cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;}
+  .tab.active{color:var(--sage-deep); border-bottom-color:var(--sage-deep);}
+  .tab-panel{padding:22px 26px 26px; display:none;}
+  .tab-panel.active{display:block;}
+  .panel-text{font-size:14.5px; color:var(--ink); line-height:1.7;}
+  .panel-text b{color:var(--sage-deep);}
+  .gradcam-row{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  @media(max-width:600px){ .gradcam-row{grid-template-columns:1fr;} }
+  .gradcam-img{aspect-ratio:1; border-radius:14px; border:1px solid var(--line); background:linear-gradient(135deg,#2b2f3a,#1a1c22); display:flex; align-items:center; justify-content:center; color:#8a93a3; font-size:12px; font-family:'IBM Plex Mono',monospace; position:relative; overflow:hidden;}
+  .gradcam-img.heat::after{content:''; position:absolute; inset:0; background:radial-gradient(circle at 42% 55%, rgba(196,103,74,0.85), rgba(92,127,102,0.35) 45%, transparent 70%);}
+  .gradcam-cap{font-size:11.5px; color:var(--ink-soft); margin-top:7px; text-align:center;}
+  .report-box{background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:20px; font-size:14px; line-height:1.75; white-space:pre-line;}
+  .disclaimer{display:flex; gap:10px; align-items:flex-start; margin-top:14px; padding:13px 15px; background:var(--sage-tint); border-radius:10px; font-size:12.5px; color:var(--sage-deep);}
+  .disclaimer svg{width:15px; height:15px; flex-shrink:0; margin-top:1px;}
+  .result-actions{display:flex; gap:12px; padding:20px 26px; border-top:1px solid var(--line-soft); flex-wrap:wrap;}
+
+  /* records table */
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th{text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); padding:10px 12px; border-bottom:1px solid var(--line);}
+  td{padding:14px 12px; border-bottom:1px solid var(--line-soft);}
+  tr:last-child td{border-bottom:none;}
+  .row-btn{font-size:12.5px; color:var(--sage-deep); font-weight:600; background:none; border:none; cursor:pointer;}
+
+  /* chat view */
+  .chat-shell{display:flex; flex-direction:column; height:520px; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--bg-raised);}
+  .chat-log{flex:1; overflow-y:auto; padding:22px; background:var(--bg); display:flex; flex-direction:column; gap:12px;}
+  .msg{max-width:75%; padding:11px 15px; border-radius:14px; font-size:14px; line-height:1.5;}
+  .msg.bot{background:var(--bg-raised); border:1px solid var(--line); align-self:flex-start; border-bottom-left-radius:4px;}
+  .msg.user{background:var(--sage-deep); color:#fff; align-self:flex-end; border-bottom-right-radius:4px;}
+  .chat-input-row{display:flex; gap:10px; padding:14px; border-top:1px solid var(--line); background:var(--bg-raised);}
+  .chat-input-row input{flex:1; border:1px solid var(--line); border-radius:100px; padding:11px 16px; font-size:14px; background:var(--bg);}
+  .chat-input-row input:focus{outline:none; border-color:var(--sage);}
+  .chat-send{background:var(--ink); color:#fff; border:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;}
+  .chat-send svg{width:16px; height:16px;}
+  .quick-q{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  .quick-q button{font-size:12.5px; background:var(--bg-raised); border:1px solid var(--line); border-radius:100px; padding:7px 14px; cursor:pointer; color:var(--ink-soft);}
+  .quick-q button:hover{border-color:var(--sage); color:var(--sage-deep);}
+
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:100px;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+  @media(max-width:900px){
+    #appScreen{grid-template-columns:1fr;}
+    .sidebar{position:relative; height:auto; flex-direction:row; align-items:center; overflow-x:auto; padding:14px 16px;}
+    .sidebar .brand{padding:0 16px 0 0;}
+    .sidebar-foot{display:none;}
+    .nav-item{white-space:nowrap;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH SCREEN ================= -->
+<div id="authScreen">
+  <div id="authBrand">
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C7 2 5 5.5 5 9c0 2 1 3 1 5 0 2.5-1.5 3-1.5 5.5C4.5 21 6 22 8 22h8c2 0 3.5-1 3.5-2.5 0-2.5-1.5-3-1.5-5.5 0-2 1-3 1-5 0-3.5-2-7-7-7Z" stroke="white" stroke-width="1.4"/><path d="M9 9c0 2 1.5 2 1.5 4S9 15 9 15M15 9c0 2-1.5 2-1.5 4s1.5 2 1.5 2" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+      NeuroSense
+    </div>
+    <div>
+      <h2>Clarity for every scan.</h2>
+      <p>A clinical workspace for MRI-based dementia staging — Grad-CAM explainability, structured reports, and patient history in one place.</p>
+    </div>
+    <div class="quote">Research &amp; screening tool — not a diagnostic system</div>
+  </div>
+
+  <div class="auth-form-wrap">
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Log in</button>
+        <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Sign up</button>
+      </div>
+
+      <form id="loginForm" onsubmit="return handleLogin(event)">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="you@gmail.com" required>
+          <div class="field-error" id="loginEmailError">Please enter a valid email address (e.g. gmail.com, yahoo.com, outlook.com).</div>
+        </div>
+        <div class="field"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" required></div>
+        <button class="btn-primary full" type="submit">Log in</button>
+      </form>
+
+      <form id="signupForm" style="display:none;" onsubmit="return handleSignup(event)">
+        <div class="field"><label>Full name</label><input type="text" id="suName" placeholder="Dr. Jane Rivera" required></div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="suEmail" placeholder="you@gmail.com" required>
+          <div class="field-error" id="suEmailError">Please enter a valid email address (e.g. gmail.com, yahoo.com, outlook.com).</div>
+        </div>
+        <div class="field"><label>Role</label>
+          <select id="suRole">
+            <option>Neurologist</option>
+            <option>Radiologist</option>
+            <option>Primary Care Physician</option>
+            <option>Researcher</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field"><label>Password</label><input type="password" id="suPassword" placeholder="••••••••" required></div>
+        <button class="btn-primary full" type="submit">Create account</button>
+      </form>
+
+      <div class="auth-foot" id="authFoot">Don't have an account? <button class="btn-ghost" onclick="switchAuthTab('signup')">Sign up</button></div>
+      <div class="demo-note">Login is local/demo only (no real auth yet) — accounts exist only for this browser session, but saved patient records persist in this browser (localStorage) between visits. Analysis, Grad-CAM, and chat are live and call your local NeuroAI server.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= APP SHELL ================= -->
+<div id="appScreen">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C7 2 5 5.5 5 9c0 2 1 3 1 5 0 2.5-1.5 3-1.5 5.5C4.5 21 6 22 8 22h8c2 0 3.5-1 3.5-2.5 0-2.5-1.5-3-1.5-5.5 0-2 1-3 1-5 0-3.5-2-7-7-7Z" stroke="white" stroke-width="1.4"/><path d="M9 9c0 2 1.5 2 1.5 4S9 15 9 15M15 9c0 2-1.5 2-1.5 4s1.5 2 1.5 2" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+      NeuroSense
+    </div>
+    <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" data-view="analysis" onclick="switchView('analysis')">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      New Analysis
+    </button>
+    <button class="nav-item" data-view="records" onclick="switchView('records')">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4V4Z" stroke="currentColor" stroke-width="1.6"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Patient Records
+    </button>
+    <button class="nav-item" data-view="chat" onclick="switchView('chat')">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      NeuroAI Chat
+    </button>
+    <button class="nav-item" data-view="profile" onclick="switchView('profile')">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c1.3-3.7 4-5.5 7.5-5.5s6.2 1.8 7.5 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Profile
+    </button>
+
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <div class="avatar" id="sidebarAvatar">JR</div>
+        <div><div class="u-name" id="sidebarName">Dr. Jane Rivera</div><div class="u-role" id="sidebarRole">Neurologist</div></div>
+      </div>
+      <span class="logout-link" onclick="handleLogout()">Log out</span>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD VIEW -->
+    <section class="view active" id="view-dashboard">
+      <div class="view-head">
+        <div><h2>Welcome back<span id="welcomeName"></span></h2><div class="sub">Here's what's happening across your assessments.</div></div>
+        <button class="btn-primary" onclick="switchView('analysis')">+ New Analysis</button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="lab">Total analyses</div><div class="val" id="statTotal">0</div><div class="delta">This session</div></div>
+        <div class="stat-card"><div class="lab">Patients on file</div><div class="val" id="statPatients">0</div><div class="delta">Unique records</div></div>
+        <div class="stat-card"><div class="lab">Most common stage</div><div class="val" id="statCommon" style="font-size:18px;">—</div><div class="delta">Across your records</div></div>
+        <div class="stat-card"><div class="lab">Reports downloaded</div><div class="val" id="statReports">0</div><div class="delta">PDF exports</div></div>
+      </div>
+
+      <div class="panel" id="mostRecentPanel" style="margin-bottom:20px;">
+        <h3>Most recent analysis</h3>
+        <div id="mostRecentContent">
+          <div class="empty-state"><p>No saved analyses yet.</p></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Recent activity</h3>
+        <div id="recentActivity">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4V4Z" stroke="currentColor" stroke-width="1.4"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <p>No analyses yet. Run your first assessment to see activity here.</p>
+            <button class="btn-secondary" onclick="switchView('analysis')">Start an analysis</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW ANALYSIS VIEW -->
+    <section class="view" id="view-analysis">
+      <div class="view-head"><div><h2>New Analysis</h2><div class="sub">Enter patient details and upload an MRI slice to run the classifier.</div></div></div>
+
+      <div class="panel">
+        <h3>Patient information</h3>
+        <div class="form-grid">
+          <div class="field"><label>Patient name</label><input type="text" id="pName" placeholder="e.g. Robert Hensley"></div>
+          <div class="field"><label>Patient / MRN ID</label><input type="text" id="pMrn" placeholder="e.g. MRN-04821"></div>
+          <div class="field"><label>Date of birth</label><input type="date" id="pDob"></div>
+          <div class="field"><label>Sex</label>
+            <select id="pSex"><option value="">Select</option><option>Female</option><option>Male</option><option>Other / prefer not to say</option></select>
+          </div>
+          <div class="field"><label>Referring clinician</label><input type="text" id="pClinician" placeholder="e.g. Dr. Jane Rivera"></div>
+          <div class="field"><label>Scan date</label><input type="date" id="pScanDate"></div>
+        </div>
+        <div class="field"><label>Clinical notes (optional)</label><textarea id="pNotes" rows="2" placeholder="Relevant history, referral reason, etc."></textarea></div>
+      </div>
+
+      <div class="panel">
+        <h3>MRI upload</h3>
+        <div class="dropzone" id="dropzone">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <div style="font-weight:600; font-size:15px; margin-bottom:4px;">Drop an MRI image, or click to browse</div>
+          <div style="font-size:13px; color:var(--ink-soft);">JPG or PNG · axial T1 slice recommended</div>
+          <input type="file" id="fileInput" accept="image/*" onchange="onFile(event)">
+        </div>
+        <div class="preview-row" id="previewRow" style="display:none;">
+          <img class="preview-thumb" id="previewThumb">
+          <div class="preview-meta"><b id="previewName">scan.jpg</b><span id="previewSize">—</span></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; flex-wrap:wrap; gap:12px;">
+          <select class="field" style="width:auto; padding:10px 14px; border:1px solid var(--line); border-radius:100px; font-size:12.5px; font-family:'IBM Plex Mono',monospace;" id="modelSelect">
+            <option>llama3.2:3b (local)</option>
+            <option>llama3.1:8b (local)</option>
+          </select>
+          <button class="btn-primary" onclick="runAnalysis()">Run Analysis</button>
+        </div>
+      </div>
+
+      <!-- results dashboard -->
+      <div class="dash-shell" id="resultsShell" style="display:none;">
+        <div class="dash-top">
+          <div class="stage-id">
+            <div class="stage-badge" id="stageBadge">CDR 0</div>
+            <div><h3 id="stageName">—</h3><div class="stage-sub" id="stageMmse">—</div></div>
+          </div>
+          <div class="conf-readout"><div class="big" id="confBig">—</div><div class="lab">Model confidence</div></div>
+        </div>
+
+        <div class="horizon-block">
+          <div class="horizon-label">Cognition Horizon — predicted stage position</div>
+          <div class="horizon"><div class="horizon-ticks"><div></div><div></div><div></div><div></div></div><div class="horizon-marker" id="horizonMarker"></div></div>
+          <div class="horizon-labels"><span id="hl0">Non-Demented</span><span id="hl1">Very Mild</span><span id="hl2">Mild</span><span id="hl3">Moderate</span></div>
+        </div>
+
+        <div class="conf-bars" id="confBars"></div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="explain" onclick="switchTab(this)">Grad-CAM</button>
+          <button class="tab" data-tab="presentation" onclick="switchTab(this)">Presentation</button>
+          <button class="tab" data-tab="etiology" onclick="switchTab(this)">Etiology</button>
+          <button class="tab" data-tab="management" onclick="switchTab(this)">Management</button>
+          <button class="tab" data-tab="report" onclick="switchTab(this)">Report</button>
+        </div>
+
+        <div class="tab-panel active" data-panel="explain">
+          <div class="gradcam-row">
+            <div><div class="gradcam-img" id="gcOriginal" style="background-size:cover; background-position:center;">original slice</div><div class="gradcam-cap">Input MRI (axial T1)</div></div>
+            <div><div class="gradcam-img heat" id="gcHeatmap" style="background-size:cover; background-position:center;">Grad-CAM overlay</div><div class="gradcam-cap" id="gcCaption">—</div></div>
+          </div>
+        </div>
+        <div class="tab-panel" data-panel="presentation"><p class="panel-text" id="txtPresentation"></p></div>
+        <div class="tab-panel" data-panel="etiology"><p class="panel-text" id="txtEtiology"></p></div>
+        <div class="tab-panel" data-panel="management"><p class="panel-text" id="txtManagement"></p></div>
+        <div class="tab-panel" data-panel="report">
+          <div class="report-box" id="reportBox"></div>
+          <div class="disclaimer"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 004 21h16a2 2 0 001.89-2.96L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="1.6"/></svg>Research/screening output only — not a clinical diagnosis. Confirm with a qualified clinician.</div>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn-primary" onclick="downloadPDF()">Download PDF report</button>
+          <button class="btn-secondary" onclick="saveRecord()">Save to patient records</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECORDS VIEW -->
+    <section class="view" id="view-records">
+      <div class="view-head"><div><h2>Patient Records</h2><div class="sub">Analyses saved during this session.</div></div></div>
+      <div class="panel" style="padding:0; overflow:hidden;">
+        <div id="recordsTableWrap">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4V4Z" stroke="currentColor" stroke-width="1.4"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <p>No saved records yet.</p>
+            <button class="btn-secondary" onclick="switchView('analysis')">Run an analysis</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAT VIEW -->
+    <section class="view" id="view-chat">
+      <div class="view-head"><div><h2>Ask NeuroAI</h2><div class="sub">Grounded in your most recent analysis, if one has been run this session.</div></div></div>
+      <div class="quick-q">
+        <button onclick="askQuick(this)">Explain the Grad-CAM result</button>
+        <button onclick="askQuick(this)">What's the typical progression from here?</button>
+        <button onclick="askQuick(this)">What should I document for the referral?</button>
+        <button onclick="askQuick(this)">What lifestyle or care recommendations apply here?</button>
+      </div>
+      <div class="chat-shell">
+        <div class="chat-log" id="chatLog">
+          <div class="msg bot">I'm NeuroAI. Run an analysis first, then ask me about the prediction, the Grad-CAM result, or general staging questions.</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Ask NeuroAI a question…" onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="chat-send" onclick="sendChat()"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16M14 6l6 6-6 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFILE VIEW -->
+    <section class="view" id="view-profile">
+      <div class="view-head"><div><h2>Profile</h2><div class="sub">Your account details for this session.</div></div></div>
+      <div class="panel" style="max-width:480px;">
+        <div class="form-grid">
+          <div class="field"><label>Full name</label><input type="text" id="profName"></div>
+          <div class="field"><label>Email</label><input type="email" id="profEmail"></div>
+          <div class="field"><label>Role</label>
+            <select id="profRole"><option>Neurologist</option><option>Radiologist</option><option>Primary Care Physician</option><option>Researcher</option><option>Other</option></select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="saveProfile()">Save changes</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // ============ CLINICAL DATA (mirrors rag_knowledge_base.py) ============
+  const STAGES = {
+    NonDemented: {
+      label:"Non-Demented", badge:"CDR 0", mmse:"MMSE correlate ≈ 26–30 · no objective impairment",
+      idx:0, base:82,
+      gradcam:"No significant focal attention — activation diffuse, consistent with age-appropriate anatomy.",
+      presentation:"No objective cognitive impairment. Activities of daily living and instrumental ADLs fully intact. Any subjective memory complaints are not corroborated by cognitive testing.",
+      etiology:"No pathological findings suggestive of neurodegeneration. Structural imaging within normal limits for age.",
+      management:"No intervention indicated beyond routine health maintenance. Reassess if new cognitive complaints arise."
+    },
+    VeryMildDemented: {
+      label:"Very Mild Demented", badge:"CDR 0.5", mmse:"MMSE correlate ≈ 24–29 · amnestic MCI",
+      idx:1, base:64,
+      gradcam:"Subtle attention over the medial temporal lobe — early, low-magnitude activation.",
+      presentation:"Mild, consistent episodic memory deficit reported by patient/informant, often not evident on brief exam. IADLs largely preserved.",
+      etiology:"Early, subtle hippocampal or entorhinal volume changes may be present; findings can be within normal limits at this stage.",
+      management:"Structured follow-up every 6–12 months. Evaluate reversible contributors (B12, TSH, depression, sleep apnea, polypharmacy)."
+    },
+    MildDemented: {
+      label:"Mild Demented", badge:"CDR 1", mmse:"MMSE correlate ≈ 20–24 · early-stage dementia",
+      idx:2, base:71,
+      gradcam:"Attention concentrated over the medial temporal lobe, consistent with hippocampal/entorhinal involvement.",
+      presentation:"Word-finding difficulty, impaired new learning, mild executive dysfunction, and emerging difficulty with complex IADLs (finances, medication management, driving).",
+      etiology:"Associated with amyloid/tau accumulation causing medial temporal lobe neurodegeneration. Risk factors include age, genetics, and cardiovascular risk factors.",
+      management:"Consider initiating a cholinesterase inhibitor per current guidelines. Begin care and safety planning; reassess every 6 months."
+    },
+    ModerateDemented: {
+      label:"Moderate Demented", badge:"CDR 2", mmse:"MMSE correlate ≈ 10–19 · middle-stage dementia",
+      idx:3, base:69,
+      gradcam:"Widespread attention across medial temporal and cortical regions, consistent with more advanced atrophy.",
+      presentation:"Disorientation to time/place, impaired judgment, behavioral symptoms (agitation, wandering), and often urinary incontinence. Assistance needed with basic ADLs.",
+      etiology:"More pronounced medial temporal and cortical atrophy with ventricular enlargement on imaging.",
+      management:"Optimize symptomatic pharmacotherapy; prioritize home safety, caregiver support, and evaluation for formal care services."
+    }
+  };
+  const STAGE_ORDER = ["NonDemented","VeryMildDemented","MildDemented","ModerateDemented"];
+
+  // ============ IN-MEMORY STATE ============
+  const API_BASE = 'http://localhost:5000';  // NeuroAI Flask server (server.py)
+  let currentUser = null;
+  let records = []; // loaded from MongoDB via loadRecordsFromServer(), see below
+
+  // ============ RECORD PERSISTENCE (MongoDB via server.py) ============
+  // Records now live in MongoDB (server.py -> /api/records), not localStorage,
+  // so they're shared across devices/browsers instead of being stuck on one machine.
+  async function loadRecordsFromServer(){
+    try{
+      const res = await fetch(API_BASE + '/api/records');
+      if(!res.ok){
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err.error || ('Server returned ' + res.status));
+      }
+      const data = await res.json();
+      records = data.map(r => ({ ...r, date: new Date(r.createdAt) }));
+    }catch(e){
+      console.warn('Could not load records from server:', e);
+      records = [];
+      const wrap = document.getElementById('recentActivity');
+      if(wrap){
+        wrap.innerHTML = `<div class="empty-state"><p>Couldn't reach the database (${e.message}). Make sure server.py is running and MongoDB is reachable.</p></div>`;
+      }
+    }
+    renderRecords();
+    renderDashboard();
+  }
+  let reportsDownloaded = 0;
+  let sessionAnalysisCount = 0; // resets each page load — "this session" only
+  let currentResult = null;
+  let uploadedFileName = null;
+  let uploadedFile = null; // the actual File object, sent to the backend
+
+  // ============ AUTH ============
+  function switchAuthTab(which){
+    document.getElementById('tabLogin').classList.toggle('active', which==='login');
+    document.getElementById('tabSignup').classList.toggle('active', which==='signup');
+    document.getElementById('loginForm').style.display = which==='login' ? 'block':'none';
+    document.getElementById('signupForm').style.display = which==='signup' ? 'block':'none';
+    document.getElementById('authFoot').innerHTML = which==='login'
+      ? `Don't have an account? <button class="btn-ghost" onclick="switchAuthTab('signup')">Sign up</button>`
+      : `Already have an account? <button class="btn-ghost" onclick="switchAuthTab('login')">Log in</button>`;
+  }
+
+  function initials(name){
+    return name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('') || 'U';
+  }
+
+  function enterApp(){
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appScreen').classList.add('active');
+    document.getElementById('sidebarName').textContent = currentUser.name;
+    document.getElementById('sidebarRole').textContent = currentUser.role;
+    document.getElementById('sidebarAvatar').textContent = initials(currentUser.name);
+    document.getElementById('welcomeName').textContent = ', ' + currentUser.name.split(' ')[0];
+    document.getElementById('profName').value = currentUser.name;
+    document.getElementById('profEmail').value = currentUser.email;
+    document.getElementById('profRole').value = currentUser.role;
+    loadRecordsFromServer();
+  }
+
+  // ============ EMAIL VALIDATION ============
+  // Accepts standard mailbox providers, checked case-insensitively (Gmail.COM, YAHOO.com, etc. all valid).
+  const ALLOWED_EMAIL_DOMAINS = [
+    'gmail.com','yahoo.com','outlook.com','hotmail.com','icloud.com',
+    'live.com','aol.com','protonmail.com','msn.com'
+  ];
+  function isValidEmail(rawEmail){
+    const email = (rawEmail || '').trim();
+    const re = /^[^\s@]+@([^\s@]+\.[^\s@]+)$/;
+    const match = email.match(re);
+    if(!match) return false;
+    const domain = match[1].toLowerCase();
+    return ALLOWED_EMAIL_DOMAINS.includes(domain);
+  }
+  function markEmailField(inputId, errorId, valid){
+    document.getElementById(inputId).classList.toggle('invalid', !valid);
+    document.getElementById(errorId).classList.toggle('show', !valid);
+  }
+
+  function handleLogin(e){
+    e.preventDefault();
+    const emailInput = document.getElementById('loginEmail');
+    const email = emailInput.value.trim().toLowerCase();
+    if(!isValidEmail(email)){
+      markEmailField('loginEmail','loginEmailError', false);
+      return false;
+    }
+    markEmailField('loginEmail','loginEmailError', true);
+    currentUser = { name: email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g, c=>c.toUpperCase()), email, role:"Clinician" };
+    enterApp();
+    return false;
+  }
+
+  function handleSignup(e){
+    e.preventDefault();
+    const emailInput = document.getElementById('suEmail');
+    const email = emailInput.value.trim().toLowerCase();
+    if(!isValidEmail(email)){
+      markEmailField('suEmail','suEmailError', false);
+      return false;
+    }
+    markEmailField('suEmail','suEmailError', true);
+    currentUser = {
+      name: document.getElementById('suName').value,
+      email: email,
+      role: document.getElementById('suRole').value
+    };
+    enterApp();
+    return false;
+  }
+
+  function handleLogout(){
+    currentUser = null;
+    document.getElementById('appScreen').classList.remove('active');
+    document.getElementById('authScreen').style.display = 'grid';
+    switchAuthTab('login');
+  }
+
+  function saveProfile(){
+    currentUser.name = document.getElementById('profName').value;
+    currentUser.email = document.getElementById('profEmail').value;
+    currentUser.role = document.getElementById('profRole').value;
+    document.getElementById('sidebarName').textContent = currentUser.name;
+    document.getElementById('sidebarRole').textContent = currentUser.role;
+    document.getElementById('sidebarAvatar').textContent = initials(currentUser.name);
+  }
+
+  // ============ NAVIGATION ============
+  function switchView(view){
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+view).classList.add('active');
+  }
+
+  // ============ FILE UPLOAD ============
+  const dropzone = document.getElementById('dropzone');
+  function onFile(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    uploadedFile = file;
+    uploadedFileName = file.name;
+    document.getElementById('previewRow').style.display = 'flex';
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('previewSize').textContent = (file.size/1024).toFixed(0) + ' KB';
+    const reader = new FileReader();
+    reader.onload = ev => document.getElementById('previewThumb').src = ev.target.result;
+    reader.readAsDataURL(file);
+  }
+  ['dragover','dragenter'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+  dropzone.addEventListener('drop', e => {
+    if(e.dataTransfer.files.length){ document.getElementById('fileInput').files = e.dataTransfer.files; onFile({target:{files:e.dataTransfer.files}}); }
+  });
+
+  // ============ TABS ============
+  function switchTab(btn){
+    const shell = btn.closest('.dash-shell');
+    shell.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    shell.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    shell.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+  }
+
+  // ============ ANALYSIS (real call to server.py / Flask backend) ============
+  async function runAnalysis(){
+    if(!uploadedFile){ alert('Please upload an MRI image first.'); return; }
+
+    const runBtn = document.querySelector('button[onclick="runAnalysis()"]');
+    const origLabel = runBtn.textContent;
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running…';
+
+    try{
+      const llmModelRaw = document.getElementById('modelSelect').value; // e.g. "llama3.2:3b (local)"
+      const llmModel = llmModelRaw.split(' ')[0];
+
+      const formData = new FormData();
+      formData.append('image', uploadedFile);
+      formData.append('llm_model', llmModel);
+
+      const res = await fetch(API_BASE + '/api/predict', { method:'POST', body: formData });
+      if(!res.ok){
+        const err = await res.json().catch(()=>({error:'Unknown error'}));
+        throw new Error(err.error || ('Server returned ' + res.status));
+      }
+      const data = await res.json();
+
+      const predicted = data.predicted;
+      const stage = STAGES[predicted];
+      // conf from the backend is already {ClassName: percent}
+      const conf = data.conf;
+      currentResult = { predicted, conf, stage, timestamp: new Date(), sessionId: data.session_id, report: data.report };
+
+      // Count this run immediately and refresh the dashboard, independent of
+      // whether the user later clicks "Save to Patient Records".
+      sessionAnalysisCount++;
+      document.getElementById('statTotal').textContent = sessionAnalysisCount;
+
+      document.getElementById('resultsShell').style.display = 'block';
+      document.getElementById('stageBadge').textContent = stage.badge;
+      document.getElementById('stageName').textContent = stage.label;
+      document.getElementById('stageMmse').textContent = stage.mmse;
+      document.getElementById('confBig').textContent = conf[predicted].toFixed(1) + '%';
+
+      // Real Grad-CAM images from the model, replacing the placeholder gradients
+      const gcOrig = document.getElementById('gcOriginal');
+      gcOrig.style.backgroundImage = `url(${data.original_image})`;
+      gcOrig.textContent = '';
+      const gcHeat = document.getElementById('gcHeatmap');
+      gcHeat.classList.remove('heat'); // remove the fake CSS radial-gradient overlay
+      gcHeat.style.backgroundImage = `url(${data.gradcam_image})`;
+      gcHeat.textContent = '';
+      document.getElementById('gcCaption').textContent = data.gradcam_note;
+
+      document.getElementById('txtPresentation').innerHTML = '<b>Clinical presentation:</b> ' + stage.presentation;
+      document.getElementById('txtEtiology').innerHTML = '<b>Etiology / risk factors:</b> ' + stage.etiology;
+      document.getElementById('txtManagement').innerHTML = '<b>Management:</b> ' + stage.management;
+
+      const marker = document.getElementById('horizonMarker');
+      marker.style.left = (stage.idx*25 + 12.5) + '%';
+      ['hl0','hl1','hl2','hl3'].forEach((id,i)=> document.getElementById(id).classList.toggle('active', i===stage.idx));
+
+      const barsWrap = document.getElementById('confBars');
+      barsWrap.innerHTML = STAGE_ORDER.map(cls=>{
+        const active = cls===predicted;
+        return `<div class="conf-row">
+          <div class="name ${active?'active':''}">${STAGES[cls].label}</div>
+          <div class="conf-track"><div class="conf-fill ${active?'active':''}" style="width:${conf[cls]}%;"></div></div>
+          <div class="conf-val">${conf[cls]}%</div>
+        </div>`;
+      }).join('');
+
+      // Real LLM-generated report from Ollama, via the backend
+      document.getElementById('reportBox').textContent = data.report;
+
+      document.getElementById('resultsShell').scrollIntoView({behavior:'smooth', block:'nearest'});
+    } catch(err){
+      alert('Analysis failed: ' + err.message + '\n\nMake sure server.py is running (python server.py) and Ollama is running (ollama serve).');
+    } finally {
+      runBtn.disabled = false;
+      runBtn.textContent = origLabel;
+    }
+  }
+
+  // ============ PDF EXPORT ============
+  function downloadPDF(){
+    if(!currentResult){ alert('Run an analysis first.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const stage = currentResult.stage;
+    const conf = currentResult.conf;
+    const pName = document.getElementById('pName').value || 'Not provided';
+    const pMrn = document.getElementById('pMrn').value || 'Not provided';
+    const pDob = document.getElementById('pDob').value || 'Not provided';
+    const pSex = document.getElementById('pSex').value || 'Not provided';
+    const pClinician = document.getElementById('pClinician').value || currentUser.name;
+    const pScanDate = document.getElementById('pScanDate').value || new Date().toISOString().slice(0,10);
+    const pNotes = document.getElementById('pNotes').value || '—';
+
+    let y = 20;
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(22,40,58);
+    doc.text('NeuroSense Clinical Report', 15, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(90,107,120);
+    doc.text('Research / screening output — not a clinical diagnosis', 15, y+6);
+    doc.setTextColor(90,107,120);
+    doc.text('Generated: ' + new Date().toLocaleString(), 195, y, {align:'right'});
+    y += 14;
+    doc.setDrawColor(228,223,211); doc.line(15,y,195,y); y += 10;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(22,40,58);
+    doc.text('Patient Information', 15, y); y += 8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(30,40,50);
+    const rows = [
+      ['Name:', pName, 'Patient / MRN ID:', pMrn],
+      ['Date of birth:', pDob, 'Sex:', pSex],
+      ['Referring clinician:', pClinician, 'Scan date:', pScanDate],
+    ];
+    rows.forEach(r=>{
+      doc.text(r[0], 15, y); doc.text(r[1], 55, y);
+      doc.text(r[2], 115, y); doc.text(r[3], 160, y);
+      y += 7;
+    });
+    y += 3;
+    doc.text('Clinical notes:', 15, y); y += 6;
+    const notesLines = doc.splitTextToSize(pNotes, 180);
+    doc.text(notesLines, 15, y); y += notesLines.length*5.5 + 8;
+
+    doc.setDrawColor(228,223,211); doc.line(15,y,195,y); y += 10;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(22,40,58);
+    doc.text('Prediction Summary', 15, y); y += 8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(30,40,50);
+    doc.text('Predicted stage: ' + stage.label + '  (' + stage.badge + ')', 15, y); y += 7;
+    doc.text('Model confidence: ' + conf[currentResult.predicted].toFixed(1) + '%', 15, y); y += 7;
+    doc.text('Clinical correlate: ' + stage.mmse, 15, y); y += 10;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+    doc.text('Confidence breakdown', 15, y); y += 7;
+    doc.setFont('helvetica','normal');
+    STAGE_ORDER.forEach(cls=>{
+      doc.text(STAGES[cls].label + ':', 20, y);
+      doc.text(conf[cls].toFixed(1) + '%', 90, y);
+      y += 6;
+    });
+    y += 6;
+
+    doc.setDrawColor(228,223,211); doc.line(15,y,195,y); y += 10;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(22,40,58);
+    doc.text('Clinical Notes', 15, y); y += 8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(30,40,50);
+    const sections = [
+      ['Presentation:', stage.presentation],
+      ['Etiology / risk factors:', stage.etiology],
+      ['Grad-CAM attention:', stage.gradcam],
+      ['Management considerations:', stage.management],
+    ];
+    sections.forEach(([label, text])=>{
+      if(y > 265){ doc.addPage(); y = 20; }
+      doc.setFont('helvetica','bold'); doc.text(label, 15, y); y += 6;
+      doc.setFont('helvetica','normal');
+      const lines = doc.splitTextToSize(text, 180);
+      doc.text(lines, 15, y); y += lines.length*5.5 + 5;
+    });
+
+    if(y > 270){ doc.addPage(); y = 20; }
+    doc.setFillColor(220,230,221);
+    doc.roundedRect(15, y, 180, 16, 3, 3, 'F');
+    doc.setTextColor(63,93,72); doc.setFontSize(9);
+    doc.text('This is a research/screening output only and does not constitute a clinical diagnosis.', 20, y+6);
+    doc.text('Formal diagnosis requires clinical evaluation by a qualified professional.', 20, y+11);
+
+    const filename = 'NeuroSense_Report_' + (pName!=='Not provided' ? pName.replace(/\s+/g,'_') : 'patient') + '.pdf';
+    doc.save(filename);
+    reportsDownloaded++;
+    document.getElementById('statReports').textContent = reportsDownloaded;
+  }
+
+  // ============ RECORDS ============
+  async function saveRecord(){
+    if(!currentResult){ alert('Run an analysis first.'); return; }
+    const pName = document.getElementById('pName').value || 'Unnamed patient';
+    const pMrn = document.getElementById('pMrn').value || '\u2014';
+    const btn = document.querySelector('button[onclick="saveRecord()"]');
+    const origLabel = btn ? btn.textContent : null;
+    if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    try{
+      const res = await fetch(API_BASE + '/api/records', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          name: pName, mrn: pMrn, stage: currentResult.stage.label,
+          badge: currentResult.stage.badge, confidence: currentResult.conf[currentResult.predicted],
+        })
+      });
+      if(!res.ok){
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err.error || ('Server returned ' + res.status));
+      }
+      await loadRecordsFromServer(); // re-pull from Mongo so the list/dashboard reflect the real saved state
+      alert('Saved to patient records (MongoDB).');
+    }catch(e){
+      alert('Could not save record: ' + e.message + '\n\nMake sure server.py is running and connected to MongoDB.');
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = origLabel; }
+    }
+  }
+
+  const stageColors = { "Non-Demented":"#5C7F66","Very Mild Demented":"#8A9A5B","Mild Demented":"#D89A5C","Moderate Demented":"#C4674A" };
+
+  function renderRecords(){
+    const wrap = document.getElementById('recordsTableWrap');
+    if(records.length===0){
+      wrap.innerHTML = `<div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4V4Z" stroke="currentColor" stroke-width="1.4"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <p>No saved records yet.</p>
+        <button class="btn-secondary" onclick="switchView('analysis')">Run an analysis</button>
+      </div>`;
+      return;
+    }
+    wrap.innerHTML = `<table>
+      <thead><tr><th>Patient</th><th>MRN</th><th>Predicted stage</th><th>Confidence</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+        ${records.map((r,i)=>`<tr>
+          <td><b>${r.name}</b></td>
+          <td class="mono">${r.mrn}</td>
+          <td><span class="stage-tag" style="background:${stageColors[r.stage]}22; color:${stageColors[r.stage]};">${r.stage}</span></td>
+          <td class="mono">${r.confidence.toFixed(1)}%</td>
+          <td>${r.date.toLocaleDateString()}</td>
+          <td><button class="row-btn" onclick="switchView('analysis')">View</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  function renderDashboard(){
+    // statTotal ("This session") is driven by sessionAnalysisCount in runAnalysis(),
+    // not by saved records — it should reflect analyses run, whether saved or not.
+    document.getElementById('statTotal').textContent = sessionAnalysisCount;
+    const uniquePatients = new Set(records.map(r=>r.mrn+r.name)).size;
+    document.getElementById('statPatients').textContent = uniquePatients;
+    if(records.length){
+      const counts = {};
+      records.forEach(r=> counts[r.stage] = (counts[r.stage]||0)+1);
+      const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+      document.getElementById('statCommon').textContent = top;
+    }
+
+    // Most recent analysis widget — records are already newest-first from
+    // the server (/api/records sorts by createdAt desc), so records[0] is it.
+    const mostRecentEl = document.getElementById('mostRecentContent');
+    if(records.length === 0){
+      mostRecentEl.innerHTML = `<div class="empty-state"><p>No saved analyses yet.</p></div>`;
+    }else{
+      const r = records[0];
+      mostRecentEl.innerHTML = `
+        <div class="activity-row">
+          <div class="activity-left">
+            <div class="activity-dot" style="background:${stageColors[r.stage]};"></div>
+            <div>
+              <div class="activity-name">${r.name} <span class="mono" style="color:#8a94a6;font-weight:400;">(${r.mrn})</span></div>
+              <div class="activity-meta">${r.date.toLocaleString()}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <span class="stage-tag" style="background:${stageColors[r.stage]}22; color:${stageColors[r.stage]};">${r.stage}</span>
+            <div class="activity-meta mono" style="margin-top:4px;">${r.confidence.toFixed(1)}% confidence</div>
+          </div>
+        </div>`;
+    }
+
+    const wrap = document.getElementById('recentActivity');
+    if(records.length===0){
+      wrap.innerHTML = `<div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4V4Z" stroke="currentColor" stroke-width="1.4"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <p>No analyses yet. Run your first assessment to see activity here.</p>
+        <button class="btn-secondary" onclick="switchView('analysis')">Start an analysis</button>
+      </div>`;
+      return;
+    }
+    wrap.innerHTML = records.slice(0,6).map(r=>`
+      <div class="activity-row">
+        <div class="activity-left">
+          <div class="activity-dot" style="background:${stageColors[r.stage]};"></div>
+          <div><div class="activity-name">${r.name}</div><div class="activity-meta">${r.date.toLocaleString()}</div></div>
+        </div>
+        <span class="stage-tag" style="background:${stageColors[r.stage]}22; color:${stageColors[r.stage]};">${r.stage}</span>
+      </div>`).join('');
+  }
+
+  // ============ CHAT ============
+  function appendMsg(text, who){
+    const log = document.getElementById('chatLog');
+    const div = document.createElement('div');
+    div.className = 'msg ' + who;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+  async function sendChat(){
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if(!text) return;
+    appendMsg(text, 'user');
+    input.value = '';
+
+    appendMsg('…', 'bot');
+    const log = document.getElementById('chatLog');
+    const thinkingEl = log.lastElementChild;
+
+    try{
+      const res = await fetch(API_BASE + '/api/chat', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          message: text,
+          session_id: currentResult ? currentResult.sessionId : null
+        })
+      });
+      if(!res.ok){
+        const err = await res.json().catch(()=>({error:'Unknown error'}));
+        throw new Error(err.error || ('Server returned ' + res.status));
+      }
+      const data = await res.json();
+      thinkingEl.textContent = data.reply;
+    } catch(err){
+      thinkingEl.textContent = 'Could not reach NeuroAI backend: ' + err.message + ' (is server.py running?)';
+    }
+  }
+  function askQuick(btn){
+    document.getElementById('chatInput').value = btn.textContent;
+    sendChat();
+  }
+
+  // init
+  switchAuthTab('login');
+  renderRecords();
+  renderDashboard();
+
+  // Prevent future-dated DOB / scan date selections (limit calendar to today at the latest)
+  (function setDateLimits(){
+    const today = new Date().toISOString().split('T')[0];
+    const dob = document.getElementById('pDob');
+    const scan = document.getElementById('pScanDate');
+    if(dob) dob.setAttribute('max', today);
+    if(scan) scan.setAttribute('max', today);
+  })();
+</script>
+
+</body>
+</html>
