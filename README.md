@@ -1,6 +1,9 @@
-# VGG16 Alzheimer MRI Classifier — Local Setup (Core Ultra 7 / RTX 4060 8GB)
+# NEURO-SENSE-AI
+A full-stack explainable AI medical platform leveraging fine-tuned VGG16 (91.4% accuracy), Grad-CAM heatmaps, and edge-deployed Llama 3.2 RAG for dementia diagnostic support
 
-## 1. GPU driver setup (do this first, it's the part people get stuck on)
+## Local Setup (Core Ultra 7 / RTX 4060 8GB)
+
+### 1. GPU driver setup (do this first, it's the part people get stuck on)
 
 Your GPU is an RTX 4060 (8GB). TensorFlow's GPU support on **native Windows was
 dropped after version 2.10** — anything newer needs Linux or WSL2. Pick one:
@@ -22,12 +25,12 @@ python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU')
 If that prints an empty list, training will still run but on CPU (much slower,
 still doable overnight for ~4000 images but not ideal).
 
-## 2. Install dependencies
+### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-## 3. Unzip your dataset so you have this layout
+### 3. Unzip your dataset so you have this layout
 ```
 Alzheimer_Balanced/
   NonDemented/
@@ -36,7 +39,7 @@ Alzheimer_Balanced/
   ModerateDemented/
 ```
 
-## 4. Run training
+### 4. Run training
 ```bash
 python train_vgg16_alzheimer.py --data_dir ./Alzheimer_Balanced
 ```
@@ -54,13 +57,13 @@ plateaus rather than running the full epoch count.
 On an RTX 4060, expect roughly 30-70 seconds/epoch at batch size 32 depending
 on disk I/O — so well under an hour total.
 
-## 5. What you'll get in `outputs/`
+### 5. What you'll get in `outputs/`
 - `best_phase1.keras`, `best_finetuned.keras` — checkpoints
 - `vgg16_alzheimer_final.keras` — final model
 - Console output: classification report + confusion matrix on the **held-out
   test set**, which never saw any near-duplicate of a training image.
 
-## On the 98% target — an honest note
+### On the 98% target — an honest note
 
 This dataset's `ModerateDemented` class only has **64 truly unique scans**
 (copied ~15x each to pad to 1000), and `MildDemented` has 896 unique scans.
@@ -81,9 +84,10 @@ from. With the leakage-safe split this script uses:
 
 I built it this way so whatever number you get is one you can trust and
 actually report.
-# Running this in VS Code (Windows)
 
-## 6. Folder layout
+## Running this in VS Code (Windows)
+
+### 6. Folder layout
 Put the data folder anywhere, e.g. `D:\Alzheimer_Balanced\`, with:
 ```
 Alzheimer_Balanced/
@@ -93,14 +97,14 @@ Alzheimer_Balanced/
   ModerateDemented/
 ```
 
-## 7. Create a virtual environment
+### 7. Create a virtual environment
 Open the project folder in VS Code, then open a terminal (`` Ctrl+` ``):
 ```powershell
 python -m venv venv
 venv\Scripts\activate
 ```
 
-## 8. Install PyTorch with CUDA (for your RTX 4060)
+### 8. Install PyTorch with CUDA (for your RTX 4060)
 `requirements.txt` deliberately does NOT list torch/torchvision — installing it via plain
 `pip install -r requirements.txt` pulls the CPU-only build from PyPI and silently overwrites
 a CUDA build if you install it in the wrong order. Install torch first, from the CUDA index:
@@ -118,7 +122,7 @@ python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_
 ```
 Should print `True RTX 4060 Laptop GPU` (or similar).
 
-### If you already hit "Torch not compiled with CUDA enabled"
+#### If you already hit "Torch not compiled with CUDA enabled"
 You have the CPU build installed. Fix it:
 ```powershell
 pip uninstall torch torchvision -y
@@ -126,15 +130,15 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 Then re-run the check command above before training.
 
-## 9. Select the interpreter in VS Code
+### 9. Select the interpreter in VS Code
 `Ctrl+Shift+P` → "Python: Select Interpreter" → pick `.\venv\Scripts\python.exe`.
 
-## 10. Run training
+### 10. Run training
 ```powershell
 python train_vgg16_alzheimer_torch.py --data_dir "D:\Alzheimer_Balanced"
 ```
 
-## 11. What you get in `outputs/`
+### 11. What you get in `outputs/`
 - `best_phase1.pt`, `best_finetuned.pt` — best checkpoints per phase
 - `phase1_loss.png`, `phase1_accuracy.png` — phase 1 curves
 - `finetuned_loss.png`, `finetuned_accuracy.png` — phase 2 curves
@@ -147,4 +151,3 @@ python train_vgg16_alzheimer_torch.py --data_dir "D:\Alzheimer_Balanced"
 - `num_workers=0` is already set for Windows, so `DataLoader` won't hang.
 - Training runs in two phases automatically (frozen head, then fine-tune block5) — no need to run it twice.
 - If VRAM runs out on the 8GB 4060, lower `BATCH_SIZE` in the script (e.g. 16).
-
